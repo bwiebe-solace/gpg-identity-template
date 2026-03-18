@@ -59,7 +59,11 @@ replace_in_files() {
   local escaped_new
   escaped_new=$(escape_replacement "$new")
   local file
-  for file in README.md .github/workflows/validate-pr.yml .github/PULL_REQUEST_TEMPLATE.md; do
+  for file in README.md \
+              .github/workflows/validate-pr.yml \
+              .github/workflows/create-signature-pr.yml \
+              .github/PULL_REQUEST_TEMPLATE.md \
+              .github/ISSUE_TEMPLATE/submit-signature.yml; do
     [[ -f "$file" ]] || continue
     sedi "s#${pattern}#${escaped_new}#g" "$file"
   done
@@ -169,11 +173,26 @@ echo "Removing setup banner from README.md..."
 # Deletes from the > [!WARNING] line through the first blank line that follows
 sedi '/^> \[!WARNING\]/,/^$/d' README.md
 
+# --- Create GitHub label (optional) -----------------------------------------
+
+echo
+if command -v gh >/dev/null 2>&1; then
+  if confirm "Create the 'signature-submission' label in GitHub now? (requires gh auth)"; then
+    gh label create "signature-submission" \
+      --color "0075ca" \
+      --description "GPG key signature submission" 2>/dev/null \
+      || echo "  Label may already exist or gh is not authenticated — create it manually in GitHub (Settings → Labels)."
+  fi
+else
+  echo "Note: Create a 'signature-submission' label in GitHub (Settings → Labels) to enable the issue-based submission workflow."
+fi
+
 echo
 echo "$(green "Done!") Review your changes with: $(bold "git diff")"
 echo
 echo "Suggested next steps:"
 echo "  1. $(bold "git add -A && git commit -m 'chore: Configure identity for ${KEY_NAME}'")"
 echo "  2. $(bold "git push")"
-echo "  3. Configure branch protection in GitHub Settings (see SETUP.md step 5)"
-echo "  4. Optionally delete SETUP.md and setup.sh once everything is configured"
+echo "  3. Ensure Issues are enabled in GitHub Settings (required for issue-based signature submission)"
+echo "  4. Configure branch protection in GitHub Settings (see SETUP.md step 5)"
+echo "  5. Optionally delete SETUP.md and setup.sh once everything is configured"

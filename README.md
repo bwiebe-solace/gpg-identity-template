@@ -47,9 +47,7 @@ trusted channel).
 ## Contributing a Signature
 
 If you have verified my identity and would like to add your signature to my
-key, please follow the steps below and open a pull request.
-
-### Signing Workflow
+key, start by signing and exporting the updated key locally:
 
 ```bash
 # 1. Import the current key from this repo
@@ -65,8 +63,20 @@ gpg --sign-key XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 gpg --armor --export XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX > pubkey.asc
 ```
 
-Then fork this repository, commit the updated `pubkey.asc`, and open a pull
-request. The PR description template will guide you through the checklist.
+Then submit the updated `pubkey.asc` using one of the two methods below.
+
+### Option 1 — Submit via GitHub issue (preferred)
+
+Open a **[Submit Signature](../../issues/new?template=submit-signature.yml)**
+issue, paste the contents of `pubkey.asc` into the form, and submit. A pull
+request will be opened automatically on your behalf — no fork required.
+
+### Option 2 — Open a pull request directly
+
+Fork this repository, commit the updated `pubkey.asc` to your fork, and open a
+pull request. The PR description template will guide you through the checklist.
+
+---
 
 PRs are merged manually by me on my local machine so that I can review the
 incoming signature and update my own keyring at the same time.

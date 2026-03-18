@@ -1,0 +1,85 @@
+name: Create Signature PR
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  create-pr:
+    if: contains(github.event.issue.labels.*.name, 'signature-submission')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract key from issue body
+        id: extract
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          KEY=$(printf '%s\n' "$ISSUE_BODY" | awk '/^-----BEGIN PGP PUBLIC KEY BLOCK-----/,/^-----END PGP PUBLIC KEY BLOCK-----/')
+          if [ -z "$KEY" ]; then
+            echo "No PGP key block found in submission." >&2
+            exit 1
+          fi
+          printf '%s\n' "$KEY" > submitted_key.asc
+
+      - name: Comment on missing key block
+        if: failure() && steps.extract.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --body "No PGP key block was found in your submission. Please ensure you paste the full armored output of \`gpg --armor --export\`, including the \`-----BEGIN PGP PUBLIC KEY BLOCK-----\` and \`-----END PGP PUBLIC KEY BLOCK-----\` lines."
+
+      - name: Validate key fingerprint
+        id: validate
+        run: |
+          EXPECTED="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+          gpg --import submitted_key.asc 2>/dev/null
+          ACTUAL=$(gpg --with-colons --fingerprint "$EXPECTED" 2>/dev/null | awk -F: '/^fpr/{print $10; exit}')
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "Fingerprint mismatch: expected $EXPECTED, got '$ACTUAL'" >&2
+            exit 1
+          fi
+
+      - name: Comment on fingerprint mismatch
+        if: failure() && steps.validate.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --body "The submitted key does not contain the expected fingerprint (\`XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\`). Please ensure you are signing and exporting the correct key."
+
+      - name: Create branch and open PR
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_USER: ${{ github.event.issue.user.login }}
+        run: |
+          BRANCH="signature/issue-${ISSUE_NUMBER}"
+          cp submitted_key.asc pubkey.asc
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add pubkey.asc
+          git commit -m "signature: Add signature contributed via issue #${ISSUE_NUMBER}"
+          git push origin "$BRANCH"
+
+          PR_URL=$(gh pr create \
+            --title "Signature from @${ISSUE_USER}" \
+            --body "Submitted via issue #${ISSUE_NUMBER} by @${ISSUE_USER}.
+
+Closes #${ISSUE_NUMBER}" \
+            --base main \
+            --head "$BRANCH")
+
+          gh issue comment "$ISSUE_NUMBER" --body "Thank you — a pull request has been opened: ${PR_URL}
+
+It will be reviewed and merged manually."

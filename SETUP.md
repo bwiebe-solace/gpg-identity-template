@@ -16,7 +16,7 @@ bash setup.sh
 ```
 
 The script will:
-- Check that `gpg` and `python3` are available
+- Check that `gpg` is available (`gh` is optional but recommended)
 - List the secret keys in your keyring and prompt you to select one (or
   confirm if there is only one)
 - Extract and display key details (name, email, key type, fingerprint), letting
@@ -24,6 +24,8 @@ The script will:
 - Replace all placeholders in the relevant files
 - Export your public key as `pubkey.asc`
 - Remove the setup warning banner from `README.md`
+- Optionally create the `signature-submission` GitHub label (if `gh` is
+  authenticated)
 
 After the script completes, review the changes with `git diff`, then commit and
 push. Continue from step 5 (branch protection) below.
@@ -87,7 +89,17 @@ checklist with your own (formatted):
 - [ ] I verified the key fingerprint is `XXXX XXXX XXXX XXXX XXXX  XXXX XXXX XXXX XXXX XXXX` before signing
 ```
 
-### Step 5 — Configure branch protection
+### Step 5 — Create the GitHub label
+
+The issue-based submission workflow requires a label named
+`signature-submission` to exist in your repository. Create it in
+**Settings → Labels → New label**, or via the CLI:
+
+```bash
+gh label create "signature-submission" --color "0075ca" --description "GPG key signature submission"
+```
+
+### Step 6 — Configure branch protection
 
 In **Settings → Rules → Rulesets**, target the default branch and enable:
 
@@ -97,9 +109,10 @@ In **Settings → Rules → Rulesets**, target the default branch and enable:
 In **Settings → General**, under **Pull Requests**, disable squash merging
 and rebase merging — leave only **Allow merge commits** enabled.
 
-Optionally disable **Issues** under **Settings → General → Features**.
+Issues should remain enabled — the Issues tab is the submission interface for
+the issue-based signature workflow.
 
-### Step 6 — Remove the setup banner and clean up
+### Step 7 — Remove the setup banner and clean up
 
 Delete the warning block from the top of `README.md` (including the blank
 line following it):
