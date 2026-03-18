@@ -97,8 +97,10 @@ git diff main pr-<PR_NUMBER>
 git show pr-<PR_NUMBER>:pubkey.asc | gpg --import
 gpg --list-sigs XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-# If the signature looks legitimate, merge with an explicit merge commit
-git merge --no-ff pr-<PR_NUMBER> -m "merge: Accept signature from <SIGNER>"
+# If the signature looks legitimate, squash-merge and commit
+# (squash is required — the bot's commit on the PR branch is unsigned)
+git merge --squash pr-<PR_NUMBER>
+git commit -m "merge: Accept signature from <SIGNER>"
 git push origin main
 
 # Clean up
