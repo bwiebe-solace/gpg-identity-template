@@ -1,0 +1,39 @@
+name: Validate PR
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check only pubkey.asc was modified
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          CHANGED=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
+          if [ "$CHANGED" != "pubkey.asc" ]; then
+            echo "Error: PR must only modify pubkey.asc"
+            echo "Changed files:"
+            echo "$CHANGED"
+            exit 1
+          fi
+
+      - name: Verify key fingerprint
+        run: |
+          EXPECTED="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+          gpg --import pubkey.asc
+          ACTUAL=$(gpg --with-colons --fingerprint "$EXPECTED" 2>/dev/null | awk -F: '/^fpr/{print $10; exit}')
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "Error: key fingerprint does not match"
+            echo "Expected: $EXPECTED"
+            echo "Got:      $ACTUAL"
+            exit 1
+          fi
+          echo "Fingerprint verified: $ACTUAL"
