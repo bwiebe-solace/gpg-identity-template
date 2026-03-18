@@ -72,11 +72,9 @@ jobs:
           git commit -m "signature: Add signature contributed via issue #${ISSUE_NUMBER}"
           git push origin "$BRANCH"
 
-          cat > pr_body.md << EOF
-Submitted via issue #${ISSUE_NUMBER} by @${ISSUE_USER}.
-
-Closes #${ISSUE_NUMBER}
-EOF
+          printf '%s\n\n%s\n' \
+            "Submitted via issue #${ISSUE_NUMBER} by @${ISSUE_USER}." \
+            "Closes #${ISSUE_NUMBER}" > pr_body.md
 
           PR_URL=$(gh pr create \
             --title "Signature from @${ISSUE_USER}" \
@@ -84,10 +82,8 @@ EOF
             --base main \
             --head "$BRANCH")
 
-          cat > comment_body.md << EOF
-Thank you — a pull request has been opened: ${PR_URL}
-
-It will be reviewed and merged manually.
-EOF
+          printf '%s\n\n%s\n' \
+            "Thank you - a pull request has been opened: ${PR_URL}" \
+            "It will be reviewed and merged manually." > comment_body.md
 
           gh issue comment "$ISSUE_NUMBER" --body-file comment_body.md
