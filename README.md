@@ -9,6 +9,13 @@ This repository is the canonical source for my GPG public key. It serves as a
 distribution point and a place for others to contribute signatures, building a
 verifiable web of trust without relying on keyserver infrastructure.
 
+> **Signers:** See [SIGNER_GUIDE.md](SIGNER_GUIDE.md) for a detailed guide including what
+> out-of-band verification means, what the automation does and does not protect,
+> and privacy considerations.
+>
+> **Key owner:** See [MAINTAINER_GUIDE.md](MAINTAINER_GUIDE.md) for key lifecycle
+> management, the attestations process, and maintainer responsibilities.
+
 ## Key Details
 
 | Field       | Value                                                       |
@@ -80,6 +87,9 @@ pull request. The PR description template will guide you through the checklist.
 
 PRs are merged manually by me on my local machine so that I can review the
 incoming signature and update my own keyring at the same time.
+
+You can also send the signed key directly by email or any other channel — a
+GitHub account is not required. See [SIGNER_GUIDE.md](SIGNER_GUIDE.md) for details.
 
 ## Maintainer: Merging a Signature PR
 

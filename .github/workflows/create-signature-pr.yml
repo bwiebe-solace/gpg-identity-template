@@ -36,7 +36,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
         run: |
-          gh issue comment "$ISSUE_NUMBER" --body "No PGP key block was found in your submission. Please ensure you paste the full armored output of \`gpg --armor --export\`, including the \`-----BEGIN PGP PUBLIC KEY BLOCK-----\` and \`-----END PGP PUBLIC KEY BLOCK-----\` lines."
+          printf '%s\n\n%s\n\n%s\n\n%s\n' \
+            "**Submission failed: no PGP key block found.**" \
+            "No \`-----BEGIN PGP PUBLIC KEY BLOCK-----\` block was found in your submission." \
+            "Please ensure you paste the full armored output of: \`gpg --armor --export XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\`" \
+            "If the automated flow continues to fail, you can submit the key file directly by email or open a pull request manually. See [SIGNER_GUIDE.md](../blob/main/SIGNER_GUIDE.md) for details." \
+            > err_body.md
+          gh issue comment "$ISSUE_NUMBER" --body-file err_body.md
 
       - name: Validate key fingerprint
         id: validate
@@ -55,7 +61,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
         run: |
-          gh issue comment "$ISSUE_NUMBER" --body "The submitted key does not contain the expected fingerprint (\`XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\`). Please ensure you are signing and exporting the correct key."
+          printf '%s\n\n%s\n\n%s\n\n%s\n' \
+            "**Submission failed: fingerprint mismatch.**" \
+            "The submitted key does not contain the expected fingerprint: \`XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\`" \
+            "Common causes: you exported a different key (ensure you run \`gpg --armor --export XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\`), or the key was truncated or corrupted when pasting." \
+            "If the automated flow continues to fail, you can submit the key file directly by email or open a pull request manually. See [SIGNER_GUIDE.md](../blob/main/SIGNER_GUIDE.md) for details." \
+            > err_body.md
+          gh issue comment "$ISSUE_NUMBER" --body-file err_body.md
 
       - name: Create branch and open PR
         if: success()
@@ -95,8 +107,10 @@ jobs:
             --base main \
             --head "$BRANCH")
 
-          printf '%s\n\n%s\n' \
-            "Thank you - a pull request has been opened: ${PR_URL}" \
-            "It will be reviewed and merged manually." > comment_body.md
+          printf '%s\n\n%s\n\n%s\n' \
+            "Thank you — a pull request has been opened: ${PR_URL}" \
+            "The key owner will review the PR manually, which involves importing your signature and verifying it locally before merging. This is not automated — please allow time for review." \
+            "This issue will close automatically when the PR is merged. If the PR is closed without merging, your signature was not accepted; a reason will be given in the PR." \
+            > comment_body.md
 
           gh issue comment "$ISSUE_NUMBER" --body-file comment_body.md
