@@ -101,11 +101,13 @@ jobs:
             "Submitted via issue #${ISSUE_NUMBER} by @${ISSUE_USER}." \
             "Closes #${ISSUE_NUMBER}" > pr_body.md
 
-          PR_URL=$(gh pr create \
-            --title "Signature from @${ISSUE_USER}" \
-            --body-file pr_body.md \
-            --base main \
-            --head "$BRANCH")
+          PR_URL=$(gh api "repos/${GITHUB_REPOSITORY}/pulls" \
+            --method POST \
+            --field "title=Signature from @${ISSUE_USER}" \
+            --raw-field "body=$(cat pr_body.md)" \
+            --field "head=${BRANCH}" \
+            --field "base=main" \
+            --jq '.html_url')
 
           printf '%s\n\n%s\n\n%s\n' \
             "Thank you — a pull request has been opened: ${PR_URL}" \
