@@ -67,6 +67,7 @@ replace_in_files() {
               keys/README.md \
               .github/workflows/validate-pr.yml \
               .github/workflows/create-signature-pr.yml \
+              .github/workflows/update-release.yml \
               .github/PULL_REQUEST_TEMPLATE.md \
               .github/ISSUE_TEMPLATE/submit-signature.yml; do
     [[ -f "$file" ]] || continue

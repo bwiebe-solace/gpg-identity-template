@@ -1,0 +1,59 @@
+name: Update Release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - pubkey.asc
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build release notes
+        run: |
+          SIGNATORIES=$(git log --format="%s" \
+            | grep "^merge: Accept signature from " \
+            | sed 's/merge: Accept signature from /- /' \
+            | sort -u)
+
+          {
+            echo "> **Note:** The signatory list below is derived from the git"
+            echo "> commit history and is provided for convenience only. The"
+            echo "> cryptographic source of truth is the key file itself —"
+            echo "> import it and run \`gpg --list-sigs\` to verify."
+            echo ""
+            echo "## Signatories"
+            echo ""
+            if [ -z "$SIGNATORIES" ]; then
+              echo "No third-party signatures yet."
+            else
+              echo "The following people have signed this key to verify my identity:"
+              echo ""
+              echo "$SIGNATORIES"
+            fi
+            echo ""
+            echo "---"
+            echo ""
+            echo "Import the key:"
+            echo '```bash'
+            echo "curl -sL https://raw.githubusercontent.com/YOUR_GITHUB_USERNAME/YOUR_REPO_NAME/main/pubkey.asc | gpg --import"
+            echo '```'
+          } > release_body.md
+
+      - name: Recreate release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete current --yes --cleanup-tag 2>/dev/null || true
+
+          gh release create current \
+            --title "Current Signed Key" \
+            --notes-file release_body.md \
+            pubkey.asc

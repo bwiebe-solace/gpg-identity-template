@@ -99,7 +99,15 @@ The issue-based submission workflow requires a label named
 gh label create "signature-submission" --color "0075ca" --description "GPG key signature submission"
 ```
 
-### Step 6 — Configure branch protection
+### Step 6 — Allow Actions to create pull requests
+
+In **Settings → Actions → General**, under **Workflow permissions**, enable
+**Allow GitHub Actions to create and approve pull requests**.
+
+This is required for the issue-based submission workflow to open PRs
+automatically on behalf of signers.
+
+### Step 7 — Configure branch protection
 
 In **Settings → Rules → Rulesets**, target the default branch and enable:
 
@@ -109,10 +117,14 @@ In **Settings → Rules → Rulesets**, target the default branch and enable:
 In **Settings → General**, under **Pull Requests**, disable squash merging
 and rebase merging — leave only **Allow merge commits** enabled.
 
+Optionally (but recommended for a GPG identity repository), also enable
+**Require signed commits** in the ruleset. This ensures every change to the
+repository is cryptographically attributed to your key.
+
 Issues should remain enabled — the Issues tab is the submission interface for
 the issue-based signature workflow.
 
-### Step 7 — Remove the setup banner and clean up
+### Step 8 — Remove the setup banner and clean up
 
 Delete the warning block from the top of `README.md` (including the blank
 line following it):
