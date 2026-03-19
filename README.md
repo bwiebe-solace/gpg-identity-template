@@ -47,9 +47,7 @@ trusted channel).
 ## Contributing a Signature
 
 If you have verified my identity and would like to add your signature to my
-key, please follow the steps below and open a pull request.
-
-### Signing Workflow
+key, start by signing and exporting the updated key locally:
 
 ```bash
 # 1. Import the current key from this repo
@@ -65,39 +63,67 @@ gpg --sign-key XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 gpg --armor --export XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX > pubkey.asc
 ```
 
-Then fork this repository, commit the updated `pubkey.asc`, and open a pull
-request. The PR description template will guide you through the checklist.
+Then submit the updated `pubkey.asc` using one of the two methods below.
+
+### Option 1 — Submit via GitHub issue (preferred)
+
+Open a **[Submit Signature](../../issues/new?template=submit-signature.yml)**
+issue, paste the contents of `pubkey.asc` into the form, and submit. A pull
+request will be opened automatically on your behalf — no fork required.
+
+### Option 2 — Open a pull request directly
+
+Fork this repository, commit the updated `pubkey.asc` to your fork, and open a
+pull request. The PR description template will guide you through the checklist.
+
+---
 
 PRs are merged manually by me on my local machine so that I can review the
 incoming signature and update my own keyring at the same time.
 
 ## Maintainer: Merging a Signature PR
 
-PRs are intentionally not merged via the GitHub UI. The steps below allow
-validating the signature and updating the local keyring atomically.
+PRs are intentionally not merged via the GitHub UI. The recommended approach
+is the included script, which handles the full flow interactively:
 
 ```bash
-# Fetch the PR branch without checking it out
+bash accept-signature.sh
+```
+
+The script lists open signature PRs, fetches the branch, imports the signer's
+public key from the issue if provided, shows current signatures, verifies them
+if possible, and prompts to accept or reject. Only accept signatures from
+people whose identity you can confirm — if the signer did not include their
+public key, verification must happen out-of-band.
+
+### Manual equivalent
+
+```bash
+# Fetch the PR branch
 git fetch origin pull/<PR_NUMBER>/head:pr-<PR_NUMBER>
 
-# Inspect the diff — it must only modify pubkey.asc
+# Verify only pubkey.asc was changed
 git diff main pr-<PR_NUMBER>
 
-# Import the key from the branch to update the local keyring and review sigs
+# Optionally import the signer's public key for verification
+# (paste from the issue, or obtain directly from the signer)
+gpg --import <signer-key.asc>
+
+# Import the updated key and review signatures
 git show pr-<PR_NUMBER>:pubkey.asc | gpg --import
 gpg --list-sigs XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-# If the signature looks legitimate, merge with an explicit merge commit
+# Accept: merge, push, and clean up
 git merge --no-ff pr-<PR_NUMBER> -m "merge: Accept signature from <SIGNER>"
 git push origin main
+git branch -d pr-<PR_NUMBER>
 
-# Clean up
+# Reject: close the PR
+gh pr close <PR_NUMBER> --comment "Rejected: <REASON>"
 git branch -d pr-<PR_NUMBER>
 ```
 
-If the signature is not legitimate or the PR modifies anything other than
-`pubkey.asc`, close the PR without merging. To remove a bad signature from the
-local keyring:
+To remove a signature from your local keyring after a rejection:
 
 ```bash
 gpg --edit-key XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX

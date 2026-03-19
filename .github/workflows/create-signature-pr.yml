@@ -1,0 +1,102 @@
+name: Create Signature PR
+
+on:
+  issues:
+    types: [opened, reopened]
+
+jobs:
+  create-pr:
+    if: contains(github.event.issue.labels.*.name, 'signature-submission')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Extract key from issue body
+        id: extract
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          KEY=$(printf '%s\n' "$ISSUE_BODY" | awk '
+            /^-----BEGIN PGP PUBLIC KEY BLOCK-----/ { found=1 }
+            found { print }
+            /^-----END PGP PUBLIC KEY BLOCK-----/ { exit }
+          ')
+          if [ -z "$KEY" ]; then
+            echo "No PGP key block found in submission." >&2
+            exit 1
+          fi
+          printf '%s\n' "$KEY" > submitted_key.asc
+
+      - name: Comment on missing key block
+        if: failure() && steps.extract.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --body "No PGP key block was found in your submission. Please ensure you paste the full armored output of \`gpg --armor --export\`, including the \`-----BEGIN PGP PUBLIC KEY BLOCK-----\` and \`-----END PGP PUBLIC KEY BLOCK-----\` lines."
+
+      - name: Validate key fingerprint
+        id: validate
+        run: |
+          EXPECTED="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+          gpg --import submitted_key.asc 2>/dev/null
+          ACTUAL=$(gpg --with-colons --fingerprint "$EXPECTED" 2>/dev/null | awk -F: '/^fpr/{print $10; exit}')
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "Fingerprint mismatch: expected $EXPECTED, got '$ACTUAL'" >&2
+            exit 1
+          fi
+
+      - name: Comment on fingerprint mismatch
+        if: failure() && steps.validate.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --body "The submitted key does not contain the expected fingerprint (\`XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\`). Please ensure you are signing and exporting the correct key."
+
+      - name: Create branch and open PR
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_USER: ${{ github.event.issue.user.login }}
+        run: |
+          BRANCH="signature/issue-${ISSUE_NUMBER}"
+
+          # Create branch at current main HEAD
+          MAIN_SHA=$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')
+          gh api "repos/${GITHUB_REPOSITORY}/git/refs" \
+            --method POST \
+            --field "ref=refs/heads/${BRANCH}" \
+            --field "sha=${MAIN_SHA}"
+
+          # Get current blob SHA of pubkey.asc (required by the update API)
+          FILE_SHA=$(gh api "repos/${GITHUB_REPOSITORY}/contents/pubkey.asc" --jq '.sha')
+
+          # Commit via the API — API commits are signed by GitHub automatically
+          KEY_B64=$(base64 -w 0 submitted_key.asc)
+          gh api "repos/${GITHUB_REPOSITORY}/contents/pubkey.asc" \
+            --method PUT \
+            --field "message=signature: Add signature contributed via issue #${ISSUE_NUMBER}" \
+            --field "content=${KEY_B64}" \
+            --field "sha=${FILE_SHA}" \
+            --field "branch=${BRANCH}"
+
+          printf '%s\n\n%s\n' \
+            "Submitted via issue #${ISSUE_NUMBER} by @${ISSUE_USER}." \
+            "Closes #${ISSUE_NUMBER}" > pr_body.md
+
+          PR_URL=$(gh pr create \
+            --title "Signature from @${ISSUE_USER}" \
+            --body-file pr_body.md \
+            --base main \
+            --head "$BRANCH")
+
+          printf '%s\n\n%s\n' \
+            "Thank you - a pull request has been opened: ${PR_URL}" \
+            "It will be reviewed and merged manually." > comment_body.md
+
+          gh issue comment "$ISSUE_NUMBER" --body-file comment_body.md

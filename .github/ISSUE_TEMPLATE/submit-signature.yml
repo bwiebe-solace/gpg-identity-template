@@ -1,0 +1,61 @@
+name: Submit Signature
+description: Submit a signed version of the key to contribute to the web of trust
+labels: ["signature-submission"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before signing, verify the key fingerprint out-of-band. See the [README](../blob/main/README.md) for full signing instructions.
+
+  - type: textarea
+    id: signed-key
+    attributes:
+      label: Signed key (ASCII armored)
+      description: Paste the full output of `gpg --armor --export XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX`
+      placeholder: |
+        -----BEGIN PGP PUBLIC KEY BLOCK-----
+
+        ...
+
+        -----END PGP PUBLIC KEY BLOCK-----
+    validations:
+      required: true
+
+  - type: input
+    id: signer-identity
+    attributes:
+      label: Your identity (optional)
+      description: Your name, email, or a link to your own GPG key
+      placeholder: Alice Smith <alice@example.com>
+
+  - type: textarea
+    id: signer-key
+    attributes:
+      label: Your public key (optional, but enables cryptographic verification)
+      description: >
+        Paste your own public key so the maintainer can verify your signature
+        without relying on a keyserver. If omitted, your signature can only be
+        verified out-of-band.
+      placeholder: |
+        -----BEGIN PGP PUBLIC KEY BLOCK-----
+
+        ...
+
+        -----END PGP PUBLIC KEY BLOCK-----
+
+  - type: textarea
+    id: verification-method
+    attributes:
+      label: How did you verify the key owner's identity?
+      description: Briefly describe the out-of-band verification you performed before signing
+      placeholder: Met in person and verified the fingerprint verbally.
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: "I verified the key fingerprint is `XXXX XXXX XXXX XXXX XXXX  XXXX XXXX XXXX XXXX XXXX` before signing"
+          required: true
+        - label: "The submitted key was produced by signing with my own key and re-exporting (`gpg --armor --export`)"
+          required: true
