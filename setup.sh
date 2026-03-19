@@ -60,6 +60,7 @@ replace_in_files() {
   escaped_new=$(escape_replacement "$new")
   local file
   for file in README.md \
+              accept-signature.sh \
               .github/workflows/validate-pr.yml \
               .github/workflows/create-signature-pr.yml \
               .github/PULL_REQUEST_TEMPLATE.md \

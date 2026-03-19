@@ -29,6 +29,21 @@ body:
       placeholder: Alice Smith <alice@example.com>
 
   - type: textarea
+    id: signer-key
+    attributes:
+      label: Your public key (optional, but enables cryptographic verification)
+      description: >
+        Paste your own public key so the maintainer can verify your signature
+        without relying on a keyserver. If omitted, your signature can only be
+        verified out-of-band.
+      placeholder: |
+        -----BEGIN PGP PUBLIC KEY BLOCK-----
+
+        ...
+
+        -----END PGP PUBLIC KEY BLOCK-----
+
+  - type: textarea
     id: verification-method
     attributes:
       label: How did you verify the key owner's identity?

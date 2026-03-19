@@ -14,14 +14,16 @@ jobs:
       issues: write
 
     steps:
-      - uses: actions/checkout@v4
-
       - name: Extract key from issue body
         id: extract
         env:
           ISSUE_BODY: ${{ github.event.issue.body }}
         run: |
-          KEY=$(printf '%s\n' "$ISSUE_BODY" | awk '/^-----BEGIN PGP PUBLIC KEY BLOCK-----/,/^-----END PGP PUBLIC KEY BLOCK-----/')
+          KEY=$(printf '%s\n' "$ISSUE_BODY" | awk '
+            /^-----BEGIN PGP PUBLIC KEY BLOCK-----/ { found=1 }
+            found { print }
+            /^-----END PGP PUBLIC KEY BLOCK-----/ { exit }
+          ')
           if [ -z "$KEY" ]; then
             echo "No PGP key block found in submission." >&2
             exit 1
@@ -63,14 +65,25 @@ jobs:
           ISSUE_USER: ${{ github.event.issue.user.login }}
         run: |
           BRANCH="signature/issue-${ISSUE_NUMBER}"
-          cp submitted_key.asc pubkey.asc
 
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -b "$BRANCH"
-          git add pubkey.asc
-          git commit -m "signature: Add signature contributed via issue #${ISSUE_NUMBER}"
-          git push origin "$BRANCH"
+          # Create branch at current main HEAD
+          MAIN_SHA=$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')
+          gh api "repos/${GITHUB_REPOSITORY}/git/refs" \
+            --method POST \
+            --field "ref=refs/heads/${BRANCH}" \
+            --field "sha=${MAIN_SHA}"
+
+          # Get current blob SHA of pubkey.asc (required by the update API)
+          FILE_SHA=$(gh api "repos/${GITHUB_REPOSITORY}/contents/pubkey.asc" --jq '.sha')
+
+          # Commit via the API — API commits are signed by GitHub automatically
+          KEY_B64=$(base64 -w 0 submitted_key.asc)
+          gh api "repos/${GITHUB_REPOSITORY}/contents/pubkey.asc" \
+            --method PUT \
+            --field "message=signature: Add signature contributed via issue #${ISSUE_NUMBER}" \
+            --field "content=${KEY_B64}" \
+            --field "sha=${FILE_SHA}" \
+            --field "branch=${BRANCH}"
 
           printf '%s\n\n%s\n' \
             "Submitted via issue #${ISSUE_NUMBER} by @${ISSUE_USER}." \
