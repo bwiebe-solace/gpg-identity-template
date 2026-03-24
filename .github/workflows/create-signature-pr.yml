@@ -42,7 +42,7 @@ jobs:
             "Please ensure you paste the full armored output of: \`gpg --armor --export XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\`" \
             "If the automated flow continues to fail, you can submit the key file directly by email or open a pull request manually. See [SIGNER_GUIDE.md](../blob/main/SIGNER_GUIDE.md) for details." \
             > err_body.md
-          gh issue comment "$ISSUE_NUMBER" --body-file err_body.md
+          gh issue comment "$ISSUE_NUMBER" --repo "${GITHUB_REPOSITORY}" --body-file err_body.md
 
       - name: Validate key fingerprint
         id: validate
@@ -67,7 +67,7 @@ jobs:
             "Common causes: you exported a different key (ensure you run \`gpg --armor --export XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\`), or the key was truncated or corrupted when pasting." \
             "If the automated flow continues to fail, you can submit the key file directly by email or open a pull request manually. See [SIGNER_GUIDE.md](../blob/main/SIGNER_GUIDE.md) for details." \
             > err_body.md
-          gh issue comment "$ISSUE_NUMBER" --body-file err_body.md
+          gh issue comment "$ISSUE_NUMBER" --repo "${GITHUB_REPOSITORY}" --body-file err_body.md
 
       - name: Create branch and open PR
         if: success()
@@ -115,4 +115,4 @@ jobs:
             "This issue will close automatically when the PR is merged. If the PR is closed without merging, your signature was not accepted; a reason will be given in the PR." \
             > comment_body.md
 
-          gh issue comment "$ISSUE_NUMBER" --body-file comment_body.md
+          gh issue comment "$ISSUE_NUMBER" --repo "${GITHUB_REPOSITORY}" --body-file comment_body.md
